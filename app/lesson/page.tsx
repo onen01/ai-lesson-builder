@@ -16,6 +16,7 @@ import type {
   SummaryReport,
   LessonPhase,
 } from "@/lib/agent/state";
+import "./lesson.css";
 
 interface LessonUIState {
   phase: LessonPhase;
@@ -133,6 +134,9 @@ export default function LessonPage() {
   const [lessonState, setLessonState] = useState<LessonUIState>(initialState);
   const [threadId, setThreadId] = useState<string>("");
   const [isApiLoading, setIsApiLoading] = useState(false);
+  const [planAction, setPlanAction] = useState<
+    "approve" | "regenerate" | null
+  >(null);
   const [filename, setFilename] = useState("document");
 
   useCopilotReadable({
@@ -177,7 +181,20 @@ export default function LessonPage() {
   }
 
   async function startLesson(pdfContent: string) {
-    setLessonState((prev) => ({ ...prev, phase: "extracting", error: null }));
+    setLessonState((prev) => ({
+      ...prev,
+      phase: "extracting",
+      currentMCQ: null,
+      currentMCQs: [],
+      pendingMCQ: null,
+      objectiveIndex: 0,
+      mcqIndex: 0,
+      isCorrect: null,
+      explanation: null,
+      hint: null,
+      summary: null,
+      error: null,
+    }));
     try {
       const result = await callLessonAPI("start", { pdfContent });
       const nextThreadId = result.threadId ?? "";
@@ -203,6 +220,7 @@ export default function LessonPage() {
   }
 
   async function handleApprove() {
+    setPlanAction("approve");
     try {
       const result = await callLessonAPI("resume", { approved: true });
       const interruptedQuestion = getInterruptedQuestion(result);
@@ -246,6 +264,23 @@ export default function LessonPage() {
         ...prev,
         error: e instanceof Error ? e.message : "Failed to start quiz",
       }));
+    } finally {
+      setPlanAction(null);
+    }
+  }
+
+  async function handleRegeneratePlan() {
+    setPlanAction("regenerate");
+    const pdfContent = sessionStorage.getItem("pdfContent");
+    if (!pdfContent) {
+      setPlanAction(null);
+      router.push("/");
+      return;
+    }
+    try {
+      await startLesson(pdfContent);
+    } finally {
+      setPlanAction(null);
     }
   }
 
@@ -411,13 +446,21 @@ export default function LessonPage() {
   return (
     <div className="flex min-h-screen bg-bg">
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="flex items-center justify-between px-8 py-4 border-b border-border bg-surface flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface flex-shrink-0">
           <span className="font-serif text-lg font-medium text-primary">
             AI Lesson Builder
           </span>
-          <span className="font-sans text-muted text-sm truncate max-w-xs ml-4">
-            {filename}
-          </span>
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="font-sans text-muted text-sm truncate max-w-xs">
+              {filename}
+            </span>
+            <button
+              onClick={handleStartOver}
+              className="btn-secondary px-5 py-2 text-sm"
+            >
+              New PDF
+            </button>
+          </div>
         </div>
 
         <ProgressBar
@@ -428,7 +471,7 @@ export default function LessonPage() {
           phase={lessonState.phase}
         />
 
-        <div className="flex-1 overflow-y-auto px-8">
+        <div className="flex-1 overflow-y-auto px-6">
           {(lessonState.phase === "idle" ||
             lessonState.phase === "extracting" ||
             lessonState.phase === "planning") &&
@@ -451,7 +494,8 @@ export default function LessonPage() {
               plan={lessonState.plan}
               filename={filename}
               onApprove={handleApprove}
-              isLoading={isApiLoading}
+              onRegenerate={handleRegeneratePlan}
+              planAction={planAction}
             />
           )}
 
@@ -459,7 +503,8 @@ export default function LessonPage() {
             lessonState.phase === "feedback" ||
             lessonState.phase === "generating_mcq") && (
             <div>
-              {lessonState.currentMCQ && (
+              {lessonState.currentMCQ &&
+                lessonState.phase !== "generating_mcq" && (
                 <MCQWidget
                   key={`${lessonState.currentMCQ.id}-${lessonState.retryKey}`}
                   question={lessonState.currentMCQ}
@@ -472,6 +517,11 @@ export default function LessonPage() {
                   totalMCQs={lessonState.totalMCQs}
                   onAnswer={handleAnswer}
                   isLoading={isApiLoading}
+                  answerResult={
+                    lessonState.phase === "feedback"
+                      ? lessonState.isCorrect
+                      : null
+                  }
                 />
               )}
 
@@ -523,7 +573,7 @@ export default function LessonPage() {
         </div>
       </main>
 
-      <aside className="w-[380px] border-l border-border flex-shrink-0 flex flex-col">
+      <aside className="lesson-copilot-shell w-[380px] border-l border-border flex-shrink-0 flex flex-col">
         <CopilotSidebar
           defaultOpen={true}
           clickOutsideToClose={false}

@@ -7,6 +7,22 @@ import { LessonState } from "@/lib/agent/state";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function getFriendlyLessonError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("quota") ||
+    lower.includes("resource_exhausted") ||
+    lower.includes("429") ||
+    lower.includes("rate limit")
+  ) {
+    return "Gemini quota was reached. Please wait for your quota to reset, then try again, or use another Gemini API key.";
+  }
+
+  return error instanceof Error ? error.message : "Internal server error";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -68,10 +84,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     console.error("Lesson API error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Internal server error",
-      },
+      { error: getFriendlyLessonError(error) },
       { status: 500 }
     );
   }

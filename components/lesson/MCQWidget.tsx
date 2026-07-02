@@ -11,6 +11,7 @@ interface MCQWidgetProps {
   totalMCQs: number;
   onAnswer: (selectedIndex: number) => void;
   isLoading: boolean;
+  answerResult?: boolean | null;
 }
 
 export function MCQWidget({
@@ -22,6 +23,7 @@ export function MCQWidget({
   totalMCQs,
   onAnswer,
   isLoading,
+  answerResult = null,
 }: MCQWidgetProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -38,8 +40,8 @@ export function MCQWidget({
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 animate-fadeIn">
-      <div className="mb-8">
+    <div className="max-w-2xl mx-auto py-5 animate-fadeIn">
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <p className="label-tag">
             OBJECTIVE {objectiveIndex + 1}/{totalObjectives}
@@ -48,56 +50,55 @@ export function MCQWidget({
             Question {mcqIndex + 1} of {totalMCQs}
           </p>
         </div>
-        <p className="font-sans text-secondary text-sm mb-3">
-          {objectiveTitle}
-        </p>
-        <div className="w-full h-1.5 bg-surface border border-border rounded-full overflow-hidden">
-          <div
-            className="h-full bg-accent rounded-full transition-all duration-500"
-            style={{
-              width: `${
-                ((objectiveIndex * totalMCQs + mcqIndex) /
-                  (totalObjectives * totalMCQs)) *
-                100
-              }%`,
-            }}
-          />
-        </div>
+        <p className="font-sans text-secondary text-[13px]">{objectiveTitle}</p>
       </div>
 
-      <div className="card mb-6">
-        <h3 className="font-serif text-2xl font-medium text-primary leading-snug">
+      <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
+        <h3 className="font-serif text-xl font-medium text-primary leading-snug">
           {question.question}
         </h3>
       </div>
 
-      <div className="space-y-3 mb-6">
+      <div className="space-y-2.5 mb-4">
         {question.options.map((option, i) => {
           const isSelected = selected === i;
           const isDisabled = hasSubmitted || isLoading;
+          const hasAnswerResult = hasSubmitted && answerResult !== null;
+          const isCorrectSelection = isSelected && hasAnswerResult && answerResult;
+          const isWrongSelection = isSelected && hasAnswerResult && !answerResult;
+          const isPendingSelection = isSelected && !hasAnswerResult;
 
           return (
             <button
               key={i}
               onClick={() => !isDisabled && setSelected(i)}
               disabled={isDisabled}
-              className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-150
+              className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150
                 ${isDisabled ? "cursor-default" : "cursor-pointer hover:bg-elevated hover:border-accent/40"}
-                ${isSelected && !hasSubmitted ? "border-accent bg-accent/5" : "border-border bg-surface"}
+                ${isCorrectSelection ? "border-success bg-success/10" : ""}
+                ${isWrongSelection ? "border-error bg-error/10" : ""}
+                ${isPendingSelection ? "border-accent bg-accent/5" : ""}
+                ${!isSelected ? "border-border bg-surface" : ""}
               `}
             >
               <div
-                className={`w-5 h-5 rounded-full border-2 mt-0.5 flex-shrink-0 flex items-center justify-center transition-colors
-                  ${isSelected && !hasSubmitted ? "border-accent bg-accent" : "border-border"}
+                className={`w-4 h-4 rounded-full border-2 mt-0.5 flex-shrink-0 flex items-center justify-center transition-colors
+                  ${isCorrectSelection ? "border-success bg-success" : ""}
+                  ${isWrongSelection ? "border-error bg-error" : ""}
+                  ${isPendingSelection ? "border-accent bg-accent" : ""}
+                  ${!isSelected ? "border-border" : ""}
                 `}
               >
-                {isSelected && !hasSubmitted && (
-                  <div className="w-2 h-2 rounded-full bg-white" />
+                {isSelected && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
                 )}
               </div>
               <span
-                className={`font-sans text-[15px] leading-relaxed
-                  ${isSelected && !hasSubmitted ? "text-accent font-medium" : "text-primary"}
+                className={`font-sans text-sm leading-relaxed
+                  ${isCorrectSelection ? "text-success font-medium" : ""}
+                  ${isWrongSelection ? "text-error font-medium" : ""}
+                  ${isPendingSelection ? "text-accent font-medium" : ""}
+                  ${!isSelected ? "text-primary" : ""}
                 `}
               >
                 {option}
@@ -111,14 +112,14 @@ export function MCQWidget({
         <button
           onClick={handleSubmit}
           disabled={selected === null || isLoading}
-          className="btn-primary w-full"
+          className="w-full bg-accent hover:bg-accent-hover text-white font-sans font-medium text-sm px-6 py-3 rounded-full transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isLoading ? "Submitting..." : "Submit Answer"}
         </button>
       )}
 
       {hasSubmitted && isLoading && (
-        <div className="text-center py-4">
+        <div className="text-center py-2">
           <p className="font-sans text-secondary text-sm">
             Checking your answer...
           </p>

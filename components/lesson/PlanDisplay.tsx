@@ -5,15 +5,19 @@ interface PlanDisplayProps {
   plan: LearningObjective[];
   filename: string;
   onApprove: () => void;
-  isLoading: boolean;
+  onRegenerate?: () => void;
+  planAction?: "approve" | "regenerate" | null;
 }
 
 export function PlanDisplay({
   plan,
   filename,
   onApprove,
-  isLoading,
+  onRegenerate,
+  planAction = null,
 }: PlanDisplayProps) {
+  const isLoading = planAction !== null;
+
   const difficultyStyles: Record<string, string> = {
     beginner: "bg-success/10 text-success border border-success/20",
     intermediate: "bg-accent/10 text-accent border border-accent/20",
@@ -58,13 +62,26 @@ export function PlanDisplay({
         ))}
       </div>
 
-      <button
-        onClick={onApprove}
-        disabled={isLoading}
-        className="btn-primary w-full"
-      >
-        {isLoading ? "Starting lesson..." : `Begin Lesson — ${plan.length} objectives →`}
-      </button>
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <button
+          onClick={onApprove}
+          disabled={isLoading}
+          className="btn-primary w-full"
+        >
+          {planAction === "approve"
+            ? "Starting lesson..."
+            : `Begin Lesson - ${plan.length} objectives`}
+        </button>
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            disabled={isLoading}
+            className="btn-secondary w-full sm:w-auto"
+          >
+            {planAction === "regenerate" ? "Regenerating..." : "Regenerate Plan"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
