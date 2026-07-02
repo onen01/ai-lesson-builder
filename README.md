@@ -6,7 +6,7 @@ Built as a skills assessment for Memorang.
 
 ## Live Demo
 
-[Add your Vercel URL here after deployment]
+https://ai-lesson-builder-five.vercel.app/
 
 ## Features
 
