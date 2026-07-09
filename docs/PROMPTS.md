@@ -1,5 +1,5 @@
 # PROMPTS.md — AI Lesson Builder
-### All 15 prompts in order. Copy each one fully into Codex. Do not skip steps.
+### All 12 prompts in order. Copy each one fully into Codex. Do not skip steps.
 ### Every prompt references the docs folder for full project context.
 ### Tick off PROGRESS_TRACKER.md after each prompt completes successfully.
 
